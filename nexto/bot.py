@@ -31,7 +31,7 @@ KICKOFF_NUMPY = np.array([
 
 class Nexto(BaseAgent):
     def __init__(self, name, team, index,
-                 beta=1, render=False, hardcoded_kickoffs=True, stochastic_kickoffs=True):
+                 beta=1, render=False, hardcoded_kickoffs=True, stochastic_kickoffs=False):
         super().__init__(name, team, index)
 
         self.obs_builder = None
@@ -80,27 +80,17 @@ class Nexto(BaseAgent):
         except TypeError:
             self.field_info = None
         self.obs_builder = NextoObsBuilder(field_info=self.field_info)
-        self.game_state = GameState(self.field_info)
+        # self.game_state = GameState(self.field_info)
         self.ticks = self.tick_skip  # So we take an action the first tick
         self.prev_time = 0
         self.controls = SimpleControllerState()
         self.action = np.zeros(8)
         self.update_action = True
         self.kickoff_index = -1
-        match_settings = self.get_match_settings()
-        mutators = match_settings.MutatorSettings()
+        # match_settings = self.get_match_settings()
+        # mutators = match_settings.MutatorSettings()
         # Examples
-
-        # Game mode
-        game_modes = (
-            "soccer",
-            "hoops",
-            "dropshot",
-            "hockey",
-            "rumble",
-            "heatseeker"
-        )
-        self.gamemode = game_modes[match_settings.GameMode()]
+        self.gamemode = "soccer"
 
     def render_attention_weights(self, weights, positions, n=3):
         if weights is None:
@@ -180,45 +170,45 @@ class Nexto(BaseAgent):
         return self.controls
 
     def forward(self, gamestate):
-        if self.update_action and len(gamestate.players) > self.index:
-            self.update_action = False
+        # if self.update_action and len(gamestate.players) > self.index:
+            # self.update_action = False
 
-            player = gamestate.players[self.index]
-            teammates = [p for p in gamestate.players if p.team_num == self.team and p != player]
-            opponents = [p for p in gamestate.players if p.team_num != self.team]
+        player = gamestate.players[self.index]
+        teammates = [p for p in gamestate.players if p.team_num == self.team and p != player]
+        opponents = [p for p in gamestate.players if p.team_num != self.team]
 
-            gamestate.players = [player] + teammates + opponents
+        gamestate.players = [player] + teammates + opponents
 
-            if self.gamemode == "heatseeker":
-                self._modify_ball_info_for_heatseeker(packet, gamestate)
+        if self.gamemode == "heatseeker":
+            self._modify_ball_info_for_heatseeker(packet, gamestate)
 
-            obs = self.obs_builder.build_obs(player, gamestate, self.action)
+        obs = self.obs_builder.build_obs(player, gamestate, self.action)
 
-            beta = self.beta
-            if packet.game_info.is_match_ended:
-                # or not (packet.game_info.is_kickoff_pause or packet.game_info.is_round_active): Removed due to kickoff
-                beta = 0  # Celebrate with random actions
-            if self.stochastic_kickoffs and packet.game_info.is_kickoff_pause:
-                beta = 0.5
-            self.action, weights = self.agent.act(obs, beta)
+        beta = self.beta
+        # if packet.game_info.is_match_ended:
+        #     # or not (packet.game_info.is_kickoff_pause or packet.game_info.is_round_active): Removed due to kickoff
+        #     beta = 0  # Celebrate with random actions
+        # if self.stochastic_kickoffs and packet.game_info.is_kickoff_pause:
+        #     beta = 0.5
+        self.action, weights = self.agent.act(obs, beta)
+        return self.action
+        #     if self.render:
+        #         positions = np.asarray([p.car_data.position for p in gamestate.players] +
+        #                                [gamestate.ball.position] +
+        #                                list(BOOST_LOCATIONS))
+        #         self.render_attention_weights(weights, positions)
 
-            if self.render:
-                positions = np.asarray([p.car_data.position for p in gamestate.players] +
-                                       [gamestate.ball.position] +
-                                       list(BOOST_LOCATIONS))
-                self.render_attention_weights(weights, positions)
+        # if self.ticks >= self.tick_skip - 1:
+        #     self.update_controls(self.action)
 
-        if self.ticks >= self.tick_skip - 1:
-            self.update_controls(self.action)
+        # if self.ticks >= self.tick_skip:
+        #     self.ticks = 0
+        #     self.update_action = True
 
-        if self.ticks >= self.tick_skip:
-            self.ticks = 0
-            self.update_action = True
+        # # if self.hardcoded_kickoffs:
+        # #     self.maybe_do_kickoff(packet, ticks_elapsed)
 
-        if self.hardcoded_kickoffs:
-            self.maybe_do_kickoff(packet, ticks_elapsed)
-
-        return self.controls
+        # return self.controls
 
     def maybe_do_kickoff(self, packet, ticks_elapsed):
         if packet.game_info.is_kickoff_pause:
