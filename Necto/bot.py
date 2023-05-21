@@ -3,6 +3,7 @@ import torch
 from rlbot.agents.base_agent import BaseAgent, SimpleControllerState
 from rlbot.utils.structures.game_data_struct import GameTickPacket
 from rlgym_compat import GameState
+from default_obs import DefaultObs
 
 from agent import Agent
 from necto_obs import NectoObsBuilder
@@ -26,6 +27,8 @@ KICKOFF_NUMPY = np.array([
 class Necto(BaseAgent):
     def __init__(self, name, team, index, beta=1, render=False, hardcoded_kickoffs=True):
         super().__init__(name, team, index)
+
+        self.our_obs_builder = DefaultObs()
 
         self.obs_builder = None
         self.agent = Agent()
@@ -103,13 +106,13 @@ class Necto(BaseAgent):
             self.game_state.players = [player] + teammates + opponents
 
             obs = self.obs_builder.build_obs(player, self.game_state, self.action)
-
+            our_obs = self.our_obs_builder(player, self.game_state)
             beta = self.beta
             if packet.game_info.is_match_ended:
                 # or not (packet.game_info.is_kickoff_pause or packet.game_info.is_round_active): Removed due to kickoff
                 beta = 0  # Celebrate with random actions
             self.action, weights = self.agent.act(obs, beta)
-
+            print(our_obs.shape, self.action)
             if self.render:
                 self.render_attention_weights(weights, obs)
 

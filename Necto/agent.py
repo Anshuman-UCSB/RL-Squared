@@ -1,6 +1,9 @@
 import math
 import os
 
+from default_obs import DefaultObs
+
+
 import numpy as np
 import torch
 import torch.nn.functional as F
