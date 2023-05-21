@@ -2,18 +2,21 @@ import rlgym
 from time import sleep
 import numpy as np
 import sys
-sys.path.insert(0, "nexto")
-from bot import Nexto
+sys.path.insert(0, "Necto")
+from bot import Necto
 
 import pickle
 
-n1 = Nexto("stolen",0,0)
-n2 = Nexto("stolen1",1,1)
-n1.initialize_agent()
-n2.initialize_agent()
-team_size = 1
+n1 = Necto("stolen0",0,0)
+n2 = Necto("stolen1",0,1)
+n3 = Necto("stolen2",1,2)
+n4 = Necto("stolen3",1,3)
 
-bots = [n1,n2]
+team_size = 2
+
+bots = [n1,n2,n3,n4]
+for b in bots:
+	b.initialize_agent()
 
 env = rlgym.make(spawn_opponents=True,
 				team_size=team_size,
@@ -31,10 +34,8 @@ while True:
 			print("using random")
 			action_i = env.action_space.sample()
 		else:
-			print("using nexto")
+			print("using Necto")
 			action_i = bots[i].forward(game_info['state'])
-		# n.forward(obs)
-		# sleep(1)
 		actions.append(action_i)
 	print(actions)
 	obs, reward, done, game_info = env.step(actions)
