@@ -8,6 +8,9 @@ from rlbot.utils.structures.game_data_struct import GameTickPacket
 from rlbot.utils.structures.quick_chats import QuickChats
 from rlgym_compat import GameState
 
+from rlbot.utils.game_state_util import BallState, CarState, Physics, Vector3, Rotator
+from rlbot.utils.game_state_util import GameState as rlbotgs
+
 import pickle,time
 
 from agent import Agent
@@ -34,10 +37,11 @@ KICKOFF_NUMPY = np.array([
     for scs in KICKOFF_CONTROLS
 ])
 
+RANDOM_START_PROB = .4
 
 class Nexto(BaseAgent):
     def __init__(self, name, team, index,
-                 beta=1, render=False, hardcoded_kickoffs=True, stochastic_kickoffs=True):
+                 beta=1, render=False, hardcoded_kickoffs=True, stochastic_kickoffs=False):
         super().__init__(name, team, index)
 
         # print(f"init(self, {name}, {team}, {index},{beta}, {render}, {hardcoded_kickoffs}, {stochastic_kickoffs})", file=open(
@@ -45,6 +49,7 @@ class Nexto(BaseAgent):
 
         self.our_obs_builder = DefaultObs()
         self.data_log = []
+        self.speed = None
 
         self.obs_builder = None
         self.agent = Agent()
@@ -91,6 +96,7 @@ class Nexto(BaseAgent):
         self.prev_time = 0
         self.controls = SimpleControllerState()
         self.action = np.zeros(8)
+        self.timer = 0
         self.update_action = True
         self.kickoff_index = -1
         match_settings = self.get_match_settings()
@@ -107,6 +113,8 @@ class Nexto(BaseAgent):
             "heatseeker"
         )
         self.gamemode = game_modes[match_settings.GameMode()]
+
+
 
     def render_attention_weights(self, weights, positions, n=3):
         if weights is None:
@@ -134,7 +142,60 @@ class Nexto(BaseAgent):
             self.renderer.draw_line_3d(loc, dest, color)
         self.renderer.end_rendering()
 
+    def set_speed(self, packet,speed):
+        if self.speed != speed:
+            gs = rlbotGS.create_from_gametickpacket(packet)
+            game_info_state = GameInfoState(game_speed=speed)
+            gs = rlbotGS(ball=gs.ball, cars=gs.cars, game_info=game_info_state)
+            self.set_game_state(gs)
+            self.speed = speed
+
+    def randomize_state(self):
+        def getRandomCarState():
+            position = Vector3(random.uniform(-4000, 4000),
+                            random.uniform(-3000, 3000),
+                            random.uniform(  500, 2000))
+
+            velocity = Vector3(random.uniform(-1500, 1500),
+                                random.uniform(-1500, 1500),
+                                random.uniform(-1000, -500))
+
+            rotation = Rotator(random.uniform(-1.5, 1.5),
+                                random.uniform(-1.5, 1.5),
+                                random.uniform(-1.5, 1.5))
+
+            angular_velocity = Vector3(random.uniform(-3.0, 3.0),
+                                        random.uniform(-3.0, 3.0),
+                                        random.uniform(-3.0, 3.0))
+
+            return CarState(physics=Physics(
+                location=position,
+                velocity=velocity,
+                rotation=rotation,
+                angular_velocity=angular_velocity
+            ))
+        ball_state = BallState(Physics(location=Vector3(random.uniform(-4000, 4000),
+                            random.uniform(-3000, 3000),
+                            random.uniform(  500, 2000)),
+                            angular_velocity=Vector3(random.uniform(-3.0, 3.0),
+                                    random.uniform(-3.0, 3.0),
+                                    random.uniform(-3.0, 3.0))
+        ))
+
+        self.set_game_state(rlbotgs(cars={i: getRandomCarState() for i in range(4)}, ball=ball_state))
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
+        # if self.index != 0: return self.controls
+        # if self.blueGoals != packet.teams[0].score or self.orangeGoals != packet.teams[1].score:
+        #     self.blueGoals = packet.teams[0].score
+        #     self.orangeGoals = packet.teams[1].score
+        #     self.timer = 0
+        if packet.game_info.is_kickoff_pause and self.timer > 15 and self.index == 0:
+            print("RANDOMIZING STATES",self.timer)
+            self.timer = 0
+            if random.random() < RANDOM_START_PROB:
+                self.randomize_state()
+
+
         cur_time = packet.game_info.seconds_elapsed
         delta = cur_time - self.prev_time
         self.prev_time = cur_time
@@ -142,7 +203,10 @@ class Nexto(BaseAgent):
         ticks_elapsed = round(delta * 120)
         self.ticks += ticks_elapsed
         self.game_state.decode(packet, ticks_elapsed)
+        # self.set_speed(packet,2)
 
+        # if RANDOM_STARTS and self.timer < 0.05 and self.index == 0:
+        #     self.randomize_state()
         if self.isToxic:
             self.toxicity(packet)
 
@@ -171,6 +235,7 @@ class Nexto(BaseAgent):
                 record_data = False
                 beta = 0  # Celebrate with random actions
             if self.stochastic_kickoffs and packet.game_info.is_kickoff_pause:
+                # record_data = False
                 beta = 0.5
             self.action, weights = self.agent.act(obs, beta)
 
@@ -191,10 +256,12 @@ class Nexto(BaseAgent):
             self.maybe_do_kickoff(packet, ticks_elapsed)
         if record_data:
             self.log_action(self.game_state,self.controls)
+        self.timer += 1.0 / 60.0
         return self.controls
 
     def log_action(self, gamestate, controls):
-        os.system('cls')
+        # os.system('cls')
+        # print(self.timer)
         if len(self.data_log) > 1000:
             dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"../data",f"{int(100*time.time())}.pkl")
             # print(dir_path)
@@ -213,8 +280,9 @@ class Nexto(BaseAgent):
             controls.boost,
             controls.handbrake
         ])
-        print(len(self.data_log), self.index, self.our_obs_builder.build_obs(self.game_state.players[self.index], gamestate).shape, train_controls)
+        # print(len(self.data_log), self.index, self.our_obs_builder.build_obs(self.game_state.players[self.index], gamestate).shape, train_controls)
         self.data_log.append((self.our_obs_builder.build_obs(self.game_state.players[self.index], gamestate),train_controls))
+
     def maybe_do_kickoff(self, packet, ticks_elapsed):
         if packet.game_info.is_kickoff_pause:
             if self.kickoff_index >= 0:
