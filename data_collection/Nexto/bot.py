@@ -263,7 +263,7 @@ class Nexto(BaseAgent):
         # os.system('cls')
         # print(self.timer)
         if len(self.data_log) > 1000:
-            dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"../data",f"{int(100*time.time())}.pkl")
+            dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"../data",f"{int(100*time.time())}-{self.index}.pkl")
             # print(dir_path)
             with open(dir_path,"wb") as f:
                 pickle.dump(self.data_log, f)
