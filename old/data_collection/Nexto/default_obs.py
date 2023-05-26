@@ -22,7 +22,7 @@ class DefaultObs:
     def reset(self, initial_state: GameState):
         pass
 
-    def build_obs(self, player: PlayerData, state: GameState) -> Any:
+    def build_obs(self, player: PlayerData, state: GameState, previous_action: np.ndarray) -> Any:
         if player.team_num == common_values.ORANGE_TEAM:
             inverted = True
             ball = state.inverted_ball
@@ -35,6 +35,7 @@ class DefaultObs:
         obs = [ball.position * self.POS_COEF,
                ball.linear_velocity * self.LIN_VEL_COEF,
                ball.angular_velocity * self.ANG_VEL_COEF,
+               previous_action,
                pads]
 
         self._add_player_to_obs(obs, player, inverted)

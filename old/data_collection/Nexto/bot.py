@@ -15,7 +15,7 @@ import pickle,time
 
 from agent import Agent
 from nexto_obs import NextoObsBuilder, BOOST_LOCATIONS
-from rlgym.utils.obs_builders import DefaultObs
+from default_obs import DefaultObs
 import os
 
 KICKOFF_CONTROLS = (
@@ -181,7 +181,7 @@ class Nexto(BaseAgent):
                                     random.uniform(-3.0, 3.0))
         ))
 
-        self.set_game_state(rlbotgs(cars={i: getRandomCarState() for i in range(4)}, ball=ball_state))
+        self.set_game_state(rlbotgs(cars={i: getRandomCarState() for i in range(2)}, ball=ball_state))
     def get_output(self, packet: GameTickPacket) -> SimpleControllerState:
         # if self.index != 0: return self.controls
         # if self.blueGoals != packet.teams[0].score or self.orangeGoals != packet.teams[1].score:
@@ -226,6 +226,7 @@ class Nexto(BaseAgent):
 
             obs = self.obs_builder.build_obs(
                 player, self.game_state, self.action)
+            our_obs = self.our_obs_builder.build_obs(player, self.game_state, self.action)
             
             # print(dir(self.game_state))
             beta = self.beta
@@ -254,15 +255,15 @@ class Nexto(BaseAgent):
         if self.hardcoded_kickoffs:
             self.maybe_do_kickoff(packet, ticks_elapsed)
         if record_data:
-            self.log_action(self.game_state,self.controls)
+            self.log_action(our_obs,self.controls)
         self.timer += 1.0 / 60.0
         return self.controls
 
-    def log_action(self, gamestate, controls):
+    def log_action(self, obs, controls):
         # os.system('cls')
         # print(self.timer)
         if len(self.data_log) > 1000:
-            dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"../data",f"{int(100*time.time())}-{self.index}.pkl")
+            dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"../data",f"{os.getlogin()}-{int(100*time.time())}-{self.index}.pkl")
             # print(dir_path)
             with open(dir_path,"wb") as f:
                 pickle.dump(self.data_log, f)
@@ -279,8 +280,8 @@ class Nexto(BaseAgent):
             controls.boost,
             controls.handbrake
         ])
-        # print(len(self.data_log), self.index, self.our_obs_builder.build_obs(self.game_state.players[self.index], gamestate).shape, train_controls)
-        self.data_log.append((self.our_obs_builder.build_obs(self.game_state.players[self.index], gamestate),train_controls))
+        # print((obs,train_controls))
+        self.data_log.append((obs,train_controls))
 
     def maybe_do_kickoff(self, packet, ticks_elapsed):
         if packet.game_info.is_kickoff_pause:
