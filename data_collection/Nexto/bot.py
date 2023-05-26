@@ -15,8 +15,7 @@ import pickle,time
 
 from agent import Agent
 from nexto_obs import NextoObsBuilder, BOOST_LOCATIONS
-from default_obs import DefaultObs
-
+from rlgym.utils.obs_builders import DefaultObs
 import os
 
 KICKOFF_CONTROLS = (
