@@ -1,8 +1,7 @@
 # Here we import the Match object and our multi-instance wrapper
 from rlgym.envs import Match
 from rlgym_tools.sb3_utils import SB3MultipleInstanceEnv
-from rlgym.utils.reward_functions import DefaultReward
-
+import os
 # Since we can't use the normal rlgym.make() function, we need to import all the default configuration objects to give to our Match.
 from custom_reward import CustomReward
 from rlgym.utils.obs_builders import DefaultObs
@@ -13,35 +12,21 @@ from rlgym.utils.reward_functions.combined_reward import CombinedReward
 from rlgym.utils.reward_functions.common_rewards import *
 from rlgym_tools.extra_rewards.diff_reward import DiffReward
 
-from rlgym.utils.obs_builders import DefaultObs
-from rlgym.utils.state_setters import DefaultState
-from rlgym.utils.terminal_conditions.common_conditions import TimeoutCondition
+
 # Finally, we import the SB3 implementation of PPO.
 from stable_baselines3.ppo import PPO
 
-# # This is the function we need to provide to our SB3MultipleInstanceEnv to construct a match. Note that this function MUST return a Match object.
-# def get_match():
-	
-# 	# Here we configure our Match. If you want to use custom configuration objects, make sure to replace the default arguments here with instances of the objects you want.
-# 	return Match(
-# 		CombinedReward.from_zipped(
-# 			(DiffReward(LiuDistancePlayerToBallReward()), 0.05),
-# 			(DiffReward(LiuDistanceBallToGoalReward()), 10),
-# 			(EventReward(touch=0.05, goal=10)),
-# 		),
-# 		GoalScoredCondition(),
-# 		DefaultObs(),
-# 		DefaultAction(),
-# 		DefaultState(),
-# 		spawn_opponents=True,
-# 	)
-
+# This is the function we need to provide to our SB3MultipleInstanceEnv to construct a match. Note that this function MUST return a Match object.
 def get_match():
 	
 	# Here we configure our Match. If you want to use custom configuration objects, make sure to replace the default arguments here with instances of the objects you want.
 	return Match(
-		DefaultReward(),
-		TimeoutCondition(225),
+		CombinedReward.from_zipped(
+			# (DiffReward(LiuDistancePlayerToBallReward()), 0.05),
+			# (DiffReward(LiuDistanceBallToGoalReward()), 10),
+			(EventReward(touch=0.05, goal=10)),
+		),
+		GoalScoredCondition(),
 		DefaultObs(),
 		DefaultAction(),
 		DefaultState(),
@@ -57,14 +42,21 @@ if __name__ == "__main__":
 		but the easiest solution is to delay for some period of time between launching clients. The amount of required delay will depend on your hardware, so make sure to change this number if your Rocket League
 		clients are crashing before they fully launch.
 	"""
-	env = SB3MultipleInstanceEnv(match_func_or_matches=get_match, num_instances=2, wait_time=20)
-	learner = PPO(policy="MlpPolicy", env=env, verbose=1)
-	learner.learn(1_000_000)
-	# env = SB3MultipleInstanceEnv(match_func_or_matches=get_match, num_instances=1, wait_time=7)
-	# learner = PPO(policy="MlpPolicy", env=env, verbose=1)
-	# step = 0
-	# step_size = 10
-	# while True:
-	# 	learner.learn(step_size)
-	# 	step+=step_size
-	# 	learner.save(f"models/{step}")
+	env = SB3MultipleInstanceEnv(match_func_or_matches=get_match, num_instances=3, wait_time=10)
+	model = PPO(policy="MlpPolicy", env=env, verbose=1)
+	try:
+		models = [int(x[:-4]) for x in os.listdir("models") if x[0]!='.']
+		latest = max(models)
+		loaded_model = PPO.load(f"models/{latest}")
+		model.policy = loaded_model.policy
+		step = latest
+		print("loaded model",latest)
+	except:
+		print("existing model not detected, loading new model")
+		model = PPO(policy="MlpPolicy", env=env, verbose=1)
+		step = 0
+	step_size = 200_000
+	while True:
+		model.learn(step_size)
+		step+=step_size
+		model.save(f"models/{step}")
