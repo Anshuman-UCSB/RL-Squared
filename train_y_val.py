@@ -7,10 +7,11 @@ from custom_reward import CustomReward
 from rlgym.utils.obs_builders import DefaultObs
 from rlgym.utils.state_setters import DefaultState
 from rlgym.utils.action_parsers import DefaultAction
-from rlgym.utils.terminal_conditions.common_conditions import GoalScoredCondition
 from rlgym.utils.reward_functions.combined_reward import CombinedReward
+from rlgym.utils.terminal_conditions.common_conditions import *
 from rlgym.utils.reward_functions.common_rewards import *
 from rlgym_tools.extra_rewards.diff_reward import DiffReward
+from rewards.grounded_reward import GroundedReward
 
 
 # Finally, we import the SB3 implementation of PPO.
@@ -22,11 +23,12 @@ def get_match():
 	# Here we configure our Match. If you want to use custom configuration objects, make sure to replace the default arguments here with instances of the objects you want.
 	return Match(
 		CombinedReward.from_zipped(
-			(DiffReward(LiuDistancePlayerToBallReward()), 0.05),
-			(DiffReward(LiuDistanceBallToGoalReward()), 10),
-			(EventReward(touch=0.05, goal=10)),
+			# (DiffReward(LiuDistancePlayerToBallReward()), 0.05),
+			# (DiffReward(LiuDistanceBallToGoalReward()), 10),
+			# (EventReward(touch=0.05, goal=10)),
+			(GroundedReward()),
 		),
-		GoalScoredCondition(),
+		(TimeoutCondition(225), GoalScoredCondition()),
 		DefaultObs(),
 		DefaultAction(),
 		DefaultState(),
@@ -45,7 +47,7 @@ if __name__ == "__main__":
 	env = SB3MultipleInstanceEnv(match_func_or_matches=get_match, num_instances=3, wait_time=10)
 	model = PPO(policy="MlpPolicy", env=env, verbose=1)
 	try:
-		models = [int(x[:-4]) for x in os.listdir("models") if x[0]!='.']
+		models = [int(x[:-4]) for x in os.listdir("models") if x[-3:]=='zip']
 		latest = max(models)
 		loaded_model = PPO.load(f"models/{latest}")
 		model.policy = loaded_model.policy
@@ -53,7 +55,8 @@ if __name__ == "__main__":
 		print("loaded model",latest)
 	except:
 		print("existing model not detected, loading new model")
-		model = PPO(policy="MlpPolicy", env=env, verbose=1)
+		model = PPO(policy="MlpPolicy", env=env, verbose=1,
+					learning_rate = 1e-3)
 		step = 0
 	step_size = 200_000
 	while True:
