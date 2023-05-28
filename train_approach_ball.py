@@ -30,7 +30,7 @@ def get_match():
 			(GroundedReward(), .1),
 			# (LinearDistReward()),
 			(ConstantReward(),-8.875),
-			(EventReward(touch=3, goal=30)),
+			(EventReward(touch=3, team_goal=30, concede=-30)),
 		),
 		(GoalScoredCondition(), TimeoutCondition(1500)),
 		DefaultObs(),
