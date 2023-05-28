@@ -16,4 +16,6 @@ class GroundedReward(RewardFunction):
     def get_reward(
             self, player: PlayerData, state: GameState, previous_action: np.ndarray
             ) -> float:
-        return -player.car_data.position[2]
+        return int(player.on_ground)
+        # return -player.car_data.position[2]
+        # return -player.car_data.position[2]

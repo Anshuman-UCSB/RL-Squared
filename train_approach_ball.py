@@ -24,11 +24,13 @@ def get_match():
 	# Here we configure our Match. If you want to use custom configuration objects, make sure to replace the default arguments here with instances of the objects you want.
 	return Match(
 		CombinedReward.from_zipped(
-			# (DiffReward(LiuDistancePlayerToBallReward()), 0.05),
-			# (DiffReward(LiuDistanceBallToGoalReward()), 10),
-			# (FaceBallReward(),1),
-			(LinearDistReward()),
-			# (EventReward(touch=1, goal=10)),
+			(LiuDistancePlayerToBallReward(), 5),
+			(LiuDistanceBallToGoalReward(), 10),
+			(FaceBallReward(),2),
+			(GroundedReward(), .1),
+			# (LinearDistReward()),
+			(ConstantReward(),-8.875),
+			(EventReward(touch=3, goal=30)),
 		),
 		(GoalScoredCondition(), TimeoutCondition(1500)),
 		DefaultObs(),
@@ -46,8 +48,10 @@ if __name__ == "__main__":
 		but the easiest solution is to delay for some period of time between launching clients. The amount of required delay will depend on your hardware, so make sure to change this number if your Rocket League
 		clients are crashing before they fully launch.
 	"""
-	env = SB3MultipleInstanceEnv(match_func_or_matches=get_match, num_instances=6, wait_time=10)
-	model = PPO(policy="MlpPolicy", env=env, verbose=1, learning_rate = 1e-3, batch_size = 128)
+	env = SB3MultipleInstanceEnv(match_func_or_matches=get_match, num_instances=3, wait_time=10)
+	model = PPO(policy="MlpPolicy", env=env, verbose=1,
+				learning_rate = 1e-3, batch_size = 128,
+				gamma=1)
 	try:
 		models = [int(x[:-4]) for x in os.listdir("models") if x[-3:]=='zip']
 		latest = max(models)
@@ -57,8 +61,9 @@ if __name__ == "__main__":
 		print("loaded model",latest)
 	except:
 		print("existing model not detected, loading new model")
-		model = PPO(policy="MlpPolicy", env=env, verbose=1,
-					learning_rate = 1e-3)
+		# model = PPO(policy="MlpPolicy", env=env, verbose=1,
+		# 		learning_rate = 1e-3, batch_size = 128,
+		# 		gamma=1)
 		step = 0
 	step_size = 200_000
 	while True:
