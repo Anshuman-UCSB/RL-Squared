@@ -47,10 +47,10 @@ if __name__ == "__main__":
 		but the easiest solution is to delay for some period of time between launching clients. The amount of required delay will depend on your hardware, so make sure to change this number if your Rocket League
 		clients are crashing before they fully launch.
 	"""
-	env = SB3MultipleInstanceEnv(match_func_or_matches=get_match, num_instances=1, wait_time=10)
+	env = SB3MultipleInstanceEnv(match_func_or_matches=get_match, num_instances=3, wait_time=13)
 	model = PPO(policy="MlpPolicy", env=env, verbose=1,
-				learning_rate = 1e-3, batch_size = 128,
-				gamma=1)
+				batch_size = 128,
+				gamma=1, tensorboard_log="./dribble_tensorboard/")
 	try:
 		models = [int(x[:-4]) for x in os.listdir("models") if x[-3:]=='zip']
 		latest = max(models)
@@ -66,6 +66,6 @@ if __name__ == "__main__":
 		step = 0
 	step_size = 200_000
 	while True:
-		model.learn(step_size)
+		model.learn(step_size,tb_log_name="run",reset_num_timesteps=False)
 		step+=step_size
 		model.save(f"models/{step}")
