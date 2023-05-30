@@ -11,7 +11,4 @@ class BallFellCondition(TerminalCondition):
 		self.last_touch = initial_state.last_touch
 
 	def is_terminal(self, current_state: GameState) -> bool:
-		"""
-		Return `True` if the last touch does not have the same ID as the last touch from the initial state.
-		"""
-		return current_state.ball.position[2]<110
+		return current_state.ball.position[2]<140
