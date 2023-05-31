@@ -12,6 +12,7 @@ from rlgym.utils.reward_functions.common_rewards import *
 from rlgym_tools.extra_rewards.diff_reward import DiffReward
 from ball_fell_condition import BallFellCondition
 from dribble_state import DribbleState
+from dribble_reward import DribbleReward
 
 
 # Finally, we import the SB3 implementation of PPO.
@@ -28,7 +29,7 @@ def get_match():
 			# (FaceBallReward(),2),
 			# (GroundedReward(), .1),
 			# (LinearDistReward()),
-			(ConstantReward(),.1),
+			(DribbleReward(),.1),
 			# (EventReward(touch=3, team_goal=30, concede=-30)),
 		),
 		(BallFellCondition(), TimeoutCondition(1500)),

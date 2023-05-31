@@ -11,4 +11,4 @@ class BallFellCondition(TerminalCondition):
 		self.last_touch = initial_state.last_touch
 
 	def is_terminal(self, current_state: GameState) -> bool:
-		return current_state.ball.position[2]<140
+		return current_state.ball.position[2]<120
