@@ -14,6 +14,9 @@ from ball_fell_condition import BallFellCondition
 from dribble_state import DribbleState
 from dribble_reward import DribbleReward
 
+from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.logger import configure
+
 
 # Finally, we import the SB3 implementation of PPO.
 from stable_baselines3.ppo import PPO
@@ -52,21 +55,18 @@ if __name__ == "__main__":
 	model = PPO(policy="MlpPolicy", env=env, verbose=1,
 				batch_size = 128,
 				gamma=1, tensorboard_log="./dribble_tensorboard/")
-	try:
-		models = [int(x[:-4]) for x in os.listdir("models") if x[-3:]=='zip']
-		latest = max(models)
-		loaded_model = PPO.load(f"models/{latest}")
-		model.policy = loaded_model.policy
-		step = latest
-		print("loaded model",latest)
-	except:
-		print("existing model not detected, loading new model")
-		# model = PPO(policy="MlpPolicy", env=env, verbose=1,
-		# 		learning_rate = 1e-3, batch_size = 128,
-		# 		gamma=1)
-		step = 0
-	step_size = 200_000
+	# try:
+	# 	models = [int(x[:-4]) for x in os.listdir("models") if x[-3:]=='zip']
+	# 	latest = max(models)
+	# 	loaded_model = PPO.load(f"models/{latest}")
+	# 	model.policy = loaded_model.policy
+	# 	step = latest
+	# 	print("loaded model",latest)
+	# except:
+		# print("existing model not detected, loading new model")
+
+	eval_callback = EvalCallback(env, eval_freq=500,
+								deterministic=True, render=False)
 	while True:
-		model.learn(step_size,tb_log_name="run",reset_num_timesteps=False)
-		step+=step_size
-		model.save(f"models/{step}")
+		model.learn(10_000_000, progress_bar=True, callback = eval_callback)
+		model.save(f"models/PPO")
