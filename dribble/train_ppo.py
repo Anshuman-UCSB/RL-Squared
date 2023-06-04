@@ -51,7 +51,7 @@ if __name__ == "__main__":
 		but the easiest solution is to delay for some period of time between launching clients. The amount of required delay will depend on your hardware, so make sure to change this number if your Rocket League
 		clien	env = SB3MultipleInstanceEnv(match_func_or_mat
 		"""
-	env = SB3MultipleInstanceEnv(match_func_or_matches=get_match, num_instances=1, wait_time=13)
+	env = SB3MultipleInstanceEnv(match_func_or_matches=get_match, num_instances=3, wait_time=13)
 	model = PPO(policy="MlpPolicy", env=env, verbose=1,
 				batch_size = 128,
 				gamma=1, tensorboard_log="./dribble_tensorboard/")
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 								deterministic=True, render=False)
 	it = 0
 	while True:
-		model.learn(10, progress_bar=True,
+		model.learn(10_000_000, progress_bar=True,
 					callback = eval_callback, reset_num_timesteps=False, tb_log_name="PPO")
 		it+=1
 		model.save(f"models/PPO{it}")
